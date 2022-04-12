@@ -14,24 +14,23 @@
 
 #include "ntp.h"
 
-
 time_t _ntp(char* url, uint16_t port)
 {
   char server_ip[32] = {0};
   struct hostent *host;
   host = gethostbyname(url);
   if(host != NULL){
-    // printf("Host name: %s\n", host->h_name);
-    //
-    // printf("h_length: %d\n", host->h_length);
-    //
-    // for(int i = 0; host->h_aliases[i]; i++){
-    //   printf("Aliases: %d, %s\n", i, host->h_aliases[i]);
-    // }
-    //
-    // for(int i = 0; host->h_addr_list[i]; i++){
-    //   printf("Address: %d, %s\n", i, inet_ntoa(*(struct in_addr *)host->h_addr_list[i]));
-    // }
+    printf("Host name: %s\n", host->h_name);
+
+    printf("h_length: %d\n", host->h_length);
+
+    for(int i = 0; host->h_aliases[i]; i++){
+      printf("Aliases: %d, %s\n", i, host->h_aliases[i]);
+    }
+
+    for(int i = 0; host->h_addr_list[i]; i++){
+      printf("Address: %d, %s\n", i, inet_ntoa(*(struct in_addr *)host->h_addr_list[i]));
+    }
   } else {
     return -1;
   }
@@ -45,7 +44,8 @@ time_t _ntp(char* url, uint16_t port)
   ntp_protocol_t send_pack, recv_pack;
   static const time_t diff_70 = 0x83AA7E80;
 
-  int sock_fd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
+  // int sock_fd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
+  int sock_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   if (sock_fd < 0) {
     printf("socket error: %s (errno: %d)\n", strerror(errno), errno);
     exit(-1);
@@ -127,7 +127,7 @@ time_t _ntp(char* url, uint16_t port)
     new_time = time(NULL) + diff_time + delay_time;
 
     // printf("new_time: %ld\n", new_time);
-    printf("%s\n", ctime(&new_time));
+    printf(" %s\n", ctime(&new_time));
 
 
   } while (ret < 0 && try_count < 5);

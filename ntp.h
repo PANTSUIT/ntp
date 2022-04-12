@@ -36,19 +36,22 @@
 // time4.google.com
 
 typedef struct {
-  // uint32_t li: 2;
-  // uint32_t vn: 3;
-  // uint32_t mode: 3;
-  // uint32_t stratum: 8;
-  // uint32_t poll: 8;
-  // uint32_t precision: 8;
 
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   uint32_t precision : 8;
   uint32_t poll : 8;
   uint32_t stratum : 8;
   uint32_t mode : 3;
   uint32_t vn : 3;
   uint32_t li : 2;
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+  uint32_t li: 2;
+  uint32_t vn: 3;
+  uint32_t mode: 3;
+  uint32_t stratum: 8;
+  uint32_t poll: 8;
+  uint32_t precision: 8;
+#endif
 
   uint32_t root_delay;
   uint32_t root_disperision;
