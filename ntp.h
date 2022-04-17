@@ -6,6 +6,11 @@
 #include <stdint.h>
 #include <time.h>
 
+
+/**
+ * The timestamp of 1970 - 1900
+ *
+ */
 #define SUB70 0x83AA7E80
 
 //阿里云授时服务器
@@ -36,31 +41,41 @@
 // time4.google.com
 
 typedef struct {
+  uint16_t _integer;
+  uint16_t _fraction;
+
+}ntp_timestamp_32_t;
+
+typedef struct {
+  uint32_t _integer;
+  uint32_t _fraction;
+}ntp_timestamp_64_t;
+
+typedef struct {
 
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-  uint32_t precision : 8;
-  uint32_t poll : 8;
-  uint32_t stratum : 8;
-  uint32_t mode : 3;
-  uint32_t vn : 3;
-  uint32_t li : 2;
+  uint8_t mode: 3;
+  uint8_t vn: 3;
+  uint8_t li: 2;
+
 #elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-  uint32_t li: 2;
-  uint32_t vn: 3;
-  uint32_t mode: 3;
-  uint32_t stratum: 8;
-  uint32_t poll: 8;
-  uint32_t precision: 8;
+
+  uint8_t li: 2;
+  uint8_t vn: 3;
+  uint8_t mode: 3;
 #endif
 
-  uint32_t root_delay;
-  uint32_t root_disperision;
-  uint32_t reference_identifier;
-  uint64_t reference_timestamp;
-  uint64_t originate_timestamp;
-  uint64_t receive_timestamp;
-  uint64_t transmit_timestamp;
+  uint8_t stratum;
+  uint8_t poll;
+  int8_t precision: 8;
 
+  ntp_timestamp_32_t root_delay;
+  ntp_timestamp_32_t root_disperision;
+  uint32_t reference_identifier;
+  ntp_timestamp_64_t reference_timestamp;
+  ntp_timestamp_64_t originate_timestamp;
+  ntp_timestamp_64_t receive_timestamp;
+  ntp_timestamp_64_t transmit_timestamp;
 } ntp_protocol_t;
 
 extern time_t _ntp(char* url, uint16_t port);

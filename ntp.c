@@ -12,7 +12,68 @@
 #include <sys/types.h>
 #include <time.h>
 
+#include <sys/time.h>
+
+
 #include "ntp.h"
+
+void ntp_protocol_default(ntp_protocol_t *_protocol) {
+  if(_protocol) {
+    memset(_protocol, 0x00, sizeof(ntp_protocol_t));
+    _protocol->li = 0;
+    _protocol->vn = 3;
+    _protocol->mode = 3;
+    _protocol->stratum = 0;
+    _protocol->poll = 4;
+    _protocol->precision = -6;
+
+    struct timeval _tv;
+    gettimeofday(&_tv, NULL);
+
+    _protocol->transmit_timestamp._integer = htonl(_tv.tv_sec + SUB70) ;
+    _protocol->transmit_timestamp._fraction = 0;
+    printf("========> %sm size: %ld\n", __FUNCTION__, sizeof(ntp_protocol_t));
+  }
+}
+
+
+void ntp_protocol_show(ntp_protocol_t _protocol) {
+  printf("_prottocol->li: %d\n", _protocol.li);
+  printf("_prottocol->vn: %d\n", _protocol.vn);
+  printf("_prottocol->mode: %d\n", _protocol.mode);
+  printf("_prottocol->stratum: %d\n", _protocol.stratum);
+  printf("_prottocol->poll: %d\n", _protocol.poll);
+  printf("_prottocol->precision: %d\n", _protocol.precision);
+
+  printf("_prottocol->root_delay: integer: %d, fraction: %d\n", _protocol.root_delay._integer, _protocol.root_delay._fraction);
+  printf("_prottocol->root_disperision: integer: %d, fraction: %d\n", _protocol.root_disperision._integer, _protocol.root_disperision._fraction);
+
+  printf("_prottocol->reference_identifier: %d\n", _protocol.reference_identifier);
+
+  printf("_prottocol->reference_timestamp: integer: %d, fraction: %d\n", _protocol.reference_timestamp._integer, _protocol.reference_timestamp._fraction);
+  printf("_prottocol->originate_timestamp: integer: %d, fraction: %d\n", _protocol.originate_timestamp._integer, _protocol.originate_timestamp._fraction);
+  printf("_prottocol->receive_timestamp: integer: %d, fraction: %d\n", _protocol.receive_timestamp._integer, _protocol.receive_timestamp._fraction);
+  printf("_prottocol->transmit_timestamp: integer: %d, fraction: %d\n", _protocol.transmit_timestamp._integer, _protocol.transmit_timestamp._fraction);
+}
+
+void ntp_protocol_show_recv(ntp_protocol_t _protocol) {
+  printf("_prottocol->li: %d\n", _protocol.li);
+  printf("_prottocol->vn: %d\n", _protocol.vn);
+  printf("_prottocol->mode: %d\n", _protocol.mode);
+  printf("_prottocol->stratum: %d\n", _protocol.stratum);
+  printf("_prottocol->poll: %d\n", _protocol.poll);
+  printf("_prottocol->precision: %d\n", _protocol.precision);
+
+  printf("_prottocol->root_delay: integer: %d, fraction: %d\n", ntohs(_protocol.root_delay._integer), _protocol.root_delay._fraction);
+  printf("_prottocol->root_disperision: integer: %d, fraction: %d\n", ntohs(_protocol.root_disperision._integer), _protocol.root_disperision._fraction);
+
+  printf("_prottocol->reference_identifier: %d\n", _protocol.reference_identifier);
+
+  printf("_prottocol->reference_timestamp: integer: %d, fraction: %d\n", ntohl(_protocol.reference_timestamp._integer) - SUB70, _protocol.reference_timestamp._fraction);
+  printf("_prottocol->originate_timestamp: integer: %d, fraction: %d\n", ntohl(_protocol.originate_timestamp._integer) - SUB70, _protocol.originate_timestamp._fraction);
+  printf("_prottocol->receive_timestamp: integer: %d, fraction: %d\n", ntohl(_protocol.receive_timestamp._integer) - SUB70, _protocol.receive_timestamp._fraction);
+  printf("_prottocol->transmit_timestamp: integer: %d, fraction: %d\n", ntohl(_protocol.transmit_timestamp._integer) - SUB70, _protocol.transmit_timestamp._fraction);
+}
 
 time_t _ntp(char* url, uint16_t port)
 {
@@ -44,33 +105,24 @@ time_t _ntp(char* url, uint16_t port)
   ntp_protocol_t send_pack, recv_pack;
   static const time_t diff_70 = 0x83AA7E80;
 
-  // int sock_fd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
-  int sock_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-  if (sock_fd < 0) {
-    printf("socket error: %s (errno: %d)\n", strerror(errno), errno);
-    exit(-1);
-  }
-
   struct sockaddr_in addr = {
     .sin_family = AF_INET,
     .sin_addr.s_addr = inet_addr(server_ip),
     .sin_port = htons(123),
   };
 
-  send_pack.li = 0;
-  send_pack.vn = 3;
-  send_pack.mode = 3;
-  send_pack.stratum = 0;
-  send_pack.poll = 4;
-  send_pack.precision = -6;
-
-  uint32_t* p32 = (uint32_t*)&send_pack;
-  *p32 = htonl(*p32);
-
   struct timeval tv = {
     .tv_sec = 3,
     .tv_sec = 0
   };
+
+  int sock_fd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
+  // int sock_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  if (sock_fd < 0) {
+    printf("socket error: %s (errno: %d)\n", strerror(errno), errno);
+    exit(-1);
+  }
+
 
   if (setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv)) < 0) {
     printf("set recv timtout error: %s (errno: %d)\n", strerror(errno), errno);
@@ -81,11 +133,13 @@ time_t _ntp(char* url, uint16_t port)
   time_t origin_time = 0, receive_time = 0;
   time_t delay_time = 0, diff_time = 0;
   do {
-    // printf("try_count: %d\n", try_count);
-    memset(&recv_pack, 0x00, sizeof(ntp_protocol_t));
+    printf("try_count: %d\n", try_count);
 
     origin_time = time(NULL) + diff_70;
-    // printf("origin_time: %ld\n", origin_time);
+    printf("origin_time: %ld\n", origin_time);
+
+    ntp_protocol_default(&send_pack);
+
     ret = sendto(sock_fd, &send_pack, sizeof(ntp_protocol_t), 0, (struct sockaddr*)&addr, sizeof(struct sockaddr));
     if (ret < 0) {
       printf("send error: %s (errno: %d)\n", strerror(errno), errno);
@@ -100,35 +154,34 @@ time_t _ntp(char* url, uint16_t port)
       continue;
     }
     receive_time = time(NULL) + diff_70;
-    // printf("receive_time: %ld\n", receive_time);
+    printf("receive_time: %ld\n", receive_time);
+    
 
-    recv_pack.root_delay = ntohl(recv_pack.root_delay);
-    recv_pack.root_disperision = ntohl(recv_pack.root_disperision);
-    recv_pack.reference_identifier = ntohl(recv_pack.reference_identifier);
-    recv_pack.reference_timestamp = ntohl(recv_pack.reference_timestamp);
-    recv_pack.originate_timestamp = ntohl(recv_pack.originate_timestamp);
-    recv_pack.receive_timestamp = ntohl(recv_pack.receive_timestamp);
-    recv_pack.transmit_timestamp = ntohl(recv_pack.transmit_timestamp);
+    ntp_protocol_show_recv(recv_pack);
+    
+    double t1, t2, t3, t4;
 
-    // printf("root_delay: %d\n", recv_pack.root_delay);
-    // printf("root_disperision: %d\n", recv_pack.root_disperision);
-    // printf("reference_identifier: %d\n", recv_pack.reference_identifier);
-    // printf("reference_timestamp: %ld\n", recv_pack.reference_timestamp);
-    // printf("originate_timestamp: %ld\n", recv_pack.originate_timestamp);
-    // printf("receive_timestamp: %ld\n", recv_pack.receive_timestamp);
-    // printf("transmit_timestamp: %ld\n", recv_pack.transmit_timestamp);
 
-    diff_time = ((recv_pack.receive_timestamp - origin_time) - (recv_pack.transmit_timestamp- receive_time)) >> 1;
-    delay_time = (receive_time - origin_time) - (recv_pack.transmit_timestamp - recv_pack.receive_timestamp);
+    t1 = ntohl(recv_pack.originate_timestamp._integer);
+    t2 = ntohl(recv_pack.receive_timestamp._integer);
+    t3 = ntohl(recv_pack.transmit_timestamp._integer);
+    t4 = receive_time;
 
-    // printf("diff_time: %ld\n", diff_time);
-    // printf("delay_time: %ld\n", delay_time);
+    printf("t1: %lf\n", t1);
+    printf("t2: %lf\n", t2);
+    printf("t3: %lf\n", t3);
+    printf("t4: %lf\n", t4);
 
-    new_time = time(NULL) + diff_time + delay_time;
+    diff_time = ((t2 - t1) + (t3 - t4)) / 2;
+    delay_time = (t4 - t1) - (t3 - t2);
 
-    // printf("new_time: %ld\n", new_time);
+    printf("diff_time: %ld\n", diff_time);
+    printf("delay_time: %ld\n", delay_time);
+
+    // new_time = time(NULL) + diff_time + delay_time;
+    new_time = time(NULL) + diff_time;
+
     printf(" %s\n", ctime(&new_time));
-
 
   } while (ret < 0 && try_count < 5);
 
@@ -138,113 +191,14 @@ time_t _ntp(char* url, uint16_t port)
 
 int ntp_test(void)
 {
-  // int ret = 0;
-  // if (argc < 2) {
-  //   printf("-------- Usages: \n");
-  //   printf(" %s <ntp_server> \n", argv[0]);
-  //   exit(-1);
-  // }
-  //
-  // ntp_protocol_t ntp_send_pack = { 0 }, ntp_recv_pack = { 0 };
-  //
-  // int c_sock_fd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
-  // if (c_sock_fd < 0) {
-  //   printf("socket error: %s (errno: %d)\n", strerror(errno), errno);
-  //   exit(-1);
-  // }
-  //
-  // char ntp_server[16];
-  // snprintf(ntp_server, 16, "%s", argv[1]);
-  // printf("server: %s\n", ntp_server);
-  //
-  // struct sockaddr_in addr = {
-  //   .sin_family = AF_INET,
-  //   .sin_addr = inet_addr(ntp_server),
-  //   .sin_port = htons(123)
-  // };
-  // printf("server: %#X\n", addr.sin_addr.s_addr);
-  //
-  // uint8_t* p = (uint8_t*)&ntp_send_pack;
-  //
-  // ntp_send_pack.li = 0;
-  // ntp_send_pack.vn = 3;
-  // ntp_send_pack.mode = 3;
-  // ntp_send_pack.stratum = 0;
-  // ntp_send_pack.poll = 4;
-  // ntp_send_pack.precision = -6;
-  //
-  // uint32_t* p32 = (uint32_t*)&ntp_send_pack;
-  // *p32 = htonl(*p32);
-  //
-  // for (int i = 0; i < sizeof(ntp_protocol_t); i++) {
-  //   printf("%#02X ", *(p + i));
-  // }
-  // printf("\n");
-  // printf("-------- data end\n");
-  //
-  // printf("-------- send start\n");
-  //
-  //
-  // struct timeval tv = {
-  //   .tv_sec = 3,
-  //   .tv_sec = 0
-  // };
-  //
-  // if (setsockopt(c_sock_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv)) < 0) {
-  //   printf("set recv timtout error: %s (errno: %d)\n", strerror(errno), errno);
-  //   exit(-1);
-  // }
-  //
-  // int count = 0;
-  // do {
-  //
-  //   memset(&ntp_recv_pack, 0x00, sizeof(ntp_recv_pack));
-  //
-  //   ntp_send_pack.originate_timestamp = time(NULL);
-  //   printf("originate_timestamp: %ld\n", ntp_send_pack.originate_timestamp);
-  //
-  //   printf("count: %d\n", count++);
-  //   if (sendto(c_sock_fd, &ntp_send_pack, sizeof(ntp_send_pack), 0, (struct sockaddr*)&addr, sizeof(struct sockaddr)) < 0) {
-  //     printf("send error: %s (errno: %d)\n", strerror(errno), errno);
-  //   }
-  //
-  //   ret = recv(c_sock_fd, &ntp_recv_pack, sizeof(ntp_recv_pack), 0);
-  //   if (ret < 0) {
-  //     printf("recv error: %s (errno: %d)\n", strerror(errno), errno);
-  //   }
-  //
-  //   p = (uint8_t*)&ntp_recv_pack;
-  //   for (int i = 0; i < sizeof(ntp_protocol_t); i++) {
-  //     printf("%#X ", *(p + i));
-  //   }
-  //   printf("\n");
-  //
-  //   ntp_recv_pack.root_delay = ntohl(ntp_recv_pack.root_delay);
-  //   ntp_recv_pack.root_disperision = ntohl(ntp_recv_pack.root_disperision);
-  //   ntp_recv_pack.reference_identifier = ntohl(ntp_recv_pack.reference_identifier);
-  //   ntp_recv_pack.reference_timestamp = ntohl(ntp_recv_pack.reference_timestamp);
-  //   ntp_recv_pack.originate_timestamp = ntohl(ntp_recv_pack.originate_timestamp);
-  //   ntp_recv_pack.receive_timestamp = ntohl(ntp_recv_pack.receive_timestamp);
-  //   ntp_recv_pack.transmit_timestamp = ntohl(ntp_recv_pack.transmit_timestamp);
-  //
-  //   printf("root_delay: %d\n", ntp_recv_pack.root_delay);
-  //   printf("root_disperision: %d\n", ntp_recv_pack.root_disperision);
-  //   printf("reference_identifier: %d\n", ntp_recv_pack.reference_identifier);
-  //   printf("reference_timestamp: %ld\n", ntp_recv_pack.reference_timestamp);
-  //   printf("originate_timestamp: %ld\n", ntp_recv_pack.originate_timestamp);
-  //   printf("receive_timestamp: %ld\n", ntp_recv_pack.receive_timestamp);
-  //   printf("transmit_timestamp: %ld\n", ntp_recv_pack.transmit_timestamp);
-  //
-  //   sleep(3);
-  // } while (1);
-  // close(c_sock_fd);
-  
+  time_t _t = time(NULL);
+  printf("start time: %s\n", ctime(&_t));
 
-  char server_name[256] = {0};
-  printf("Enter the ntp server name:");
-  scanf("%s", server_name);
-  getchar();
-  _ntp(server_name, 123);
+  // _ntp(server_name, 123);
+  _ntp("ntp.ntsc.ac.cn", 123);
+
+  _t = time(NULL);
+  printf("end time: %s\n", ctime(&_t));
   
   return 0;
 }
