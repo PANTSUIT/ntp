@@ -30,7 +30,7 @@ void ntp_protocol_default(ntp_protocol_t *_protocol) {
     struct timeval _tv;
     gettimeofday(&_tv, NULL);
 
-    _protocol->transmit_timestamp._integer = htonl(_tv.tv_sec + SUB70) ;
+    _protocol->transmit_timestamp._integer = htonl(time(NULL) + SUB70) ;
     _protocol->transmit_timestamp._fraction = 0;
     printf("========> %sm size: %ld\n", __FUNCTION__, sizeof(ntp_protocol_t));
   }
